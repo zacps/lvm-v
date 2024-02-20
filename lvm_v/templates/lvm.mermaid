@@ -74,6 +74,8 @@ block-beta
         {% endfor %}
     end
 
+    {% if render_mountpoints %}
+
     space:4
 
     mounts["Mountpoint"]
@@ -93,6 +95,8 @@ block-beta
         {% endif %}
         {% endfor %} #}
     end
+
+    {% endif %}
 
     %% Drive -> partition links
     {% for part in partitions %}
@@ -143,6 +147,8 @@ block-beta
     {% endif %}
     {% endfor %}
 
+    {% if render_mountpoints %}
+
     %% LV -> Mountpoint links
     {% for drive in lvs %}
     {% if drive["mountpoint"] %}
@@ -156,6 +162,8 @@ block-beta
     partition_{{ drive["name"] }} --> _{{drive["mountpoint"]}}_mount
     {% endif %}
     {% endfor %} #}
+
+    {% endif %}
 
     %% [Style] Row labels
     classDef rowlabel stroke:none,fill:none;
