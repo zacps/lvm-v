@@ -38,13 +38,15 @@ def main():
     with open("lvm_v/lsblk.json") as f:
         lsblk = json.load(f)["blockdevices"]
 
-    print(json.dumps(lvs, indent=2))
-    print(json.dumps(pvs, indent=2))
-    print(json.dumps(vgs, indent=2))
-    print(json.dumps(lsblk, indent=2))
-
-    # todo: identify and separate thinpools
-    #thins = [vol for vol in lvs if vol["lv_attr"][0] == "t"]
+    thins, lvs_no_thin = [], []
+    for vol in lvs:
+        if vol["lv_attr"][0] == "t":
+            thins.append(vol)
+        else:
+            lvs_no_thin.append(vol)
+            if not vol["pool_lv"]:
+                thins.append({"fake": True})
+    lvs = lvs_no_thin
 
     # Assign mount points to logical volumes from lsblk
     for vol in lvs:
@@ -63,17 +65,18 @@ def main():
                 part_name = f'/dev/{child["name"]}'
                 partitions.append({
                     "name": part_name,
-                    "size": "",
+                    "size": child["size"].lower(),
                     "lvm_allocated": part_name in {pv["pv_name"] for pv in pvs},
                     "disk": name,
-                    "fake": False
+                    "fake": False,
+                    "mountpoint": child["mountpoint"]
                 })
                 parts += 1
 
         lvm_allocated = name in {pv["pv_name"] for pv in pvs}
         disks.append({
             "name": name,
-            "size": "",
+            "size": disk["size"].lower(),
             "lvm_allocated": lvm_allocated,
             "parts": parts
         })
@@ -86,8 +89,6 @@ def main():
                 "fake": True
             })
 
-    # Assign mount points to partitions (that aren't used in lvm) from lsblk
-
     env = Environment(
         loader=FileSystemLoader("lvm_v/templates"),
         autoescape=select_autoescape()
@@ -97,7 +98,7 @@ def main():
 
     print("---")
 
-    print(template.render(lvs=lvs, pvs=pvs, vgs=vgs, disks=disks, partitions=partitions))
+    print(template.render(lvs=lvs, pvs=pvs, vgs=vgs, disks=disks, partitions=partitions, thins=thins))
 
 if __name__ == "__main__":
     main()

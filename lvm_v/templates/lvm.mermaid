@@ -50,6 +50,22 @@ block-beta
 
     space:4
 
+    {% if thins|length > 0 %}
+    thinslabel["Thin pools"]
+
+    block:thins:3
+        {% for drive in thins %}
+        {% if not drive["fake"] %}
+        thin_{{ drive["lv_name"] }}["{{ drive["lv_name"] }}<br>({{ drive["lv_size"] }})"]
+        {% else %}
+        space
+        {% endif %}
+        {% endfor %}
+    end
+
+    space:4
+    {% endif %}
+
     lvs["Logical volumes"]
 
     block:lv:3
@@ -70,6 +86,12 @@ block-beta
         space
         {% endif %}
         {% endfor %}
+
+        {# {% for drive in partitions %}
+        {% if drive["mountpoint"] %}
+        _{{drive["mountpoint"]}}_mount["{{drive["mountpoint"]}}"]
+        {% endif %}
+        {% endfor %} #}
     end
 
     %% Drive -> partition links
@@ -100,10 +122,24 @@ block-beta
     {% endif %}
     {% endfor %}
 
+    %% VG -> Thin links
+    {% for drive in thins %}
+    {% if not drive["fake"] %}
+    _{{ drive["vg_name"] }} --> thin_{{ drive["lv_name"] }}
+    {% endif %}
+    {% endfor %}
+
     %% VG -> LV links
     {% for drive in lvs %}
-    {% if drive["vg_name"] %}
+    {% if drive["vg_name"] and not drive["pool_lv"] %}
     _{{ drive["vg_name"] }} --> _{{ drive["lv_name"] }}
+    {% endif %}
+    {% endfor %}
+
+    %% Thin -> LV links
+    {% for drive in lvs %}
+    {% if drive["pool_lv"] %}
+    thin_{{ drive["pool_lv"] }} --> _{{ drive["lv_name"] }}
     {% endif %}
     {% endfor %}
 
@@ -114,13 +150,20 @@ block-beta
     {% endif %}
     {% endfor %}
 
+    {# %% Partition -> mountpoint links
+    {% for drive in partitions%}
+    {% if drive["mountpoint"] %}
+    partition_{{ drive["name"] }} --> _{{drive["mountpoint"]}}_mount
+    {% endif %}
+    {% endfor %} #}
+
     %% [Style] Row labels
     classDef rowlabel stroke:none,fill:none;
-    class driveslabel,partitionslabel,physicalvolumeslabel,volumegroups,lvs,mounts rowlabel
+    class driveslabel,partitionslabel,physicalvolumeslabel,volumegroups,thinslabel,lvs,mounts rowlabel
 
     %% [Style] Transparent blocks
     classDef transparentBlock fill:none,stroke:none;
-    class drives,partitions,physicalvolumes,vg,lv,mountsblock transparentBlock
+    class drives,partitions,physicalvolumes,vg,thins,lv,mountsblock transparentBlock
 
     %% [Style] LVM Allocation
     classDef allocated ;
