@@ -1,0 +1,127 @@
+block-beta
+    columns 4
+
+    driveslabel["Drives"]
+
+    block:drives:3
+        {% for drive in disks %}
+        drive_{{ drive["name"].replace("/", "_") }}["{{ drive["name"] }}<br>({{ drive["size"] }})"]
+        {# Ideally we'd stretch the drives for each partition, but that doesn't seem to work currently##}
+        {% for _ in range(drive["parts"]-1) %}
+        space
+        {% endfor %}
+        {% endfor %}
+    end
+
+    space:4
+
+    partitionslabel["Partitions"]
+
+    block:partitions:3
+        {% for drive in partitions %}
+        {% if not drive["fake"] %}
+        partition_{{ drive["name"] }}["{{ drive["name"] }}<br>({{ drive["size"] }})"]
+        {% else %}
+        space
+        {% endif %}
+        {% endfor %}
+    end
+
+    space:4
+
+
+    physicalvolumeslabel["Physical volumes"]
+
+    block:physicalvolumes:3
+        {% for drive in pvs %}
+        _{{ drive["pv_name"] }}["{{ drive["pv_name"] }}<br>({{ drive["pv_size"] }})"]
+        {% endfor %}
+    end
+
+    space:4
+
+    volumegroups["Volume groups"]
+
+    block:vg:3
+        {% for drive in vgs %}
+        _{{ drive["vg_name"] }}["{{ drive["vg_name"] }}<br>({{ drive["vg_size"] }})"]
+        {% endfor %}
+    end
+
+    space:4
+
+    lvs["Logical volumes"]
+
+    block:lv:3
+        {% for drive in lvs %}
+        _{{ drive["lv_name"] }}["{{ drive["lv_name"] }}<br>({{ drive["lv_size"] }})"]
+        {% endfor %}
+    end
+
+    space:4
+
+    mounts["Mountpoint"]
+
+    block:mountsblock:3
+        {% for drive in lvs %}
+        {% if drive["mountpoint"] %}
+        _{{ drive["lv_name"] }}_mount["{{ drive["mountpoint"] }}"]
+        {% else %}
+        space
+        {% endif %}
+        {% endfor %}
+    end
+
+    %% Drive -> partition links
+    {% for part in partitions %}
+    {% if not part["fake"] %}
+    drive_{{ part["disk"].replace("/", "_") }} --> partition_{{ part["name"] }}
+    {% endif %}
+    {% endfor %}
+
+    %% Drive -> PV links
+    {% for drive in disks %}
+    {% if drive["lvm_allocated"] %}
+    drive_{{ drive["name"].replace("/", "_") }} --> _{{ drive["name"] }}
+    {% endif %}
+    {% endfor %}
+
+    %% Partition -> PV links
+    {% for drive in partitions %}
+    {% if drive["lvm_allocated"] %}
+    partition_{{ drive["name"] }} --> _{{ drive["name"] }}
+    {% endif %}
+    {% endfor %}
+
+    %% PV -> VG links
+    {% for drive in pvs %}
+    {% if drive["vg_name"] %}
+    _{{ drive["pv_name"] }} --> _{{ drive["vg_name"] }}
+    {% endif %}
+    {% endfor %}
+
+    %% VG -> LV links
+    {% for drive in lvs %}
+    {% if drive["vg_name"] %}
+    _{{ drive["vg_name"] }} --> _{{ drive["lv_name"] }}
+    {% endif %}
+    {% endfor %}
+
+    %% LV -> Mountpoint links
+    {% for drive in lvs %}
+    {% if drive["mountpoint"] %}
+    _{{ drive["lv_name"] }} --> _{{ drive["lv_name"] }}_mount           
+    {% endif %}
+    {% endfor %}
+
+    %% [Style] Row labels
+    classDef rowlabel stroke:none,fill:none;
+    class driveslabel,partitionslabel,physicalvolumeslabel,volumegroups,lvs,mounts rowlabel
+
+    %% [Style] Transparent blocks
+    classDef transparentBlock fill:none,stroke:none;
+    class drives,partitions,physicalvolumes,vg,lv,mountsblock transparentBlock
+
+    %% [Style] LVM Allocation
+    classDef allocated ;
+    class {%for drive in disks%}{%if drive["lvm_allocated"]%}drive_{{drive["name"].replace("/", "_")}}{%if not loop.last%},{%endif%}{%endif%}{%endfor%} allocated
