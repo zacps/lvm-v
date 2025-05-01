@@ -34,7 +34,11 @@ block-beta
 
     block:physicalvolumes:3
         {% for drive in pvs %}
-        _{{ drive["pv_name"] }}["{{ drive["pv_name"] }}<br>({{ drive["pv_size"] }})"]
+        {% if not drive["fake"] %}
+        _{{ drive["pv_name"].replace("/", "_") }}["{{ drive["pv_name"] }}<br>({{ drive["pv_size"] }})"]
+        {% else %}
+        space
+        {% endif %}
         {% endfor %}
     end
 
@@ -108,21 +112,21 @@ block-beta
     %% Drive -> PV links
     {% for drive in disks %}
     {% if drive["lvm_allocated"] %}
-    drive_{{ drive["name"].replace("/", "_") }} --> _{{ drive["name"] }}
+    drive_{{ drive["name"].replace("/", "_") }} --> _{{ drive["name"].replace("/", "_") }}
     {% endif %}
     {% endfor %}
 
     %% Partition -> PV links
     {% for drive in partitions %}
     {% if drive["lvm_allocated"] %}
-    partition_{{ drive["name"] }} --> _{{ drive["name"] }}
+    partition_{{ drive["name"] }} --> _{{ drive["name"].replace("/", "_") }}
     {% endif %}
     {% endfor %}
 
     %% PV -> VG links
     {% for drive in pvs %}
     {% if drive["vg_name"] %}
-    _{{ drive["pv_name"] }} --> _{{ drive["vg_name"] }}
+    _{{ drive["pv_name"].replace("/", "_") }} --> _{{ drive["vg_name"] }}
     {% endif %}
     {% endfor %}
 
@@ -176,3 +180,24 @@ block-beta
     %% [Style] LVM Allocation
     classDef allocated ;
     class {%for drive in disks%}{%if drive["lvm_allocated"]%}drive_{{drive["name"].replace("/", "_")}}{%if not loop.last%},{%endif%}{%endif%}{%endfor%} allocated
+
+    %% [Style] Volume group colouring
+    {% for drive in vgs %}
+    style _{{ drive["vg_name"] }} stroke:#{{ drive["color"] }};
+    {% endfor %}
+    %% [Style] Thin colouring
+    {% for drive in thins %}
+    {% if not drive["fake"] %}
+    style _{{ drive["vg_name"] }} stroke:#{{ drive["color"] }};
+    {% endif %}
+    {% endfor %}
+    %% [Style] LV colouring
+    {% for drive in lvs %}
+    style _{{ drive["lv_name"] }} stroke:#{{ drive["color"] }};
+    {% endfor %}
+    %% [Style] PV colouring
+    {% for drive in pvs %}
+    {% if not drive["fake"] %}
+    style _{{ drive["pv_name"].replace("/", "_") }} stroke:#{{ drive["color"] }};
+    {% endif %}
+    {% endfor %}
